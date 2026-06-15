@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <title>Online Bela V2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <h1>🃏 Online Bela V2</h1>
+        <p>Adut • štihovi • bodovi • Bela • zvanja • timovi do 1001</p>
+    </header>
+
+    <main>
+        <section id="joinBox" class="card">
+            <h2>Uđi u sobu</h2>
+
+            <input id="playerName" placeholder="Tvoje ime">
+            <input id="roomId" placeholder="Ime sobe, npr. soba1">
+
+            <button onclick="joinRoom()">Uđi</button>
+
+            <p class="hint">
+                Za testiranje otvori 4 kartice i uđi u istu sobu s 4 različita imena.
+            </p>
+        </section>
+
+        <section id="gameBox" class="card hidden">
+            <h2>Soba: <span id="roomNameText"></span></h2>
+
+            <div class="scoreBoard">
+                <div>Tim A: <b id="scoreA">0</b></div>
+                <div>Tim B: <b id="scoreB">0</b></div>
+                <div>Runda A: <b id="roundA">0</b></div>
+                <div>Runda B: <b id="roundB">0</b></div>
+                <div>Zvanja A: <b id="declA">0</b></div>
+                <div>Zvanja B: <b id="declB">0</b></div>
+            </div>
+
+            <div class="status">
+                <p>Igrači: <span id="playersText">0 / 4</span></p>
+                <p>Faza: <b id="phaseText">Čekanje</b></p>
+                <p>Adut: <b id="trumpText">Nema</b></p>
+                <p>Na potezu: <b id="turnText">Čekamo igrače...</b></p>
+                <p>Štih: <b id="trickText">0</b>/8</p>
+            </div>
+
+            <div id="trumpBox" class="hidden">
+                <h3>Odaberi adut</h3>
+                <button onclick="chooseTrump('♠')">♠ Pik</button>
+                <button onclick="chooseTrump('♥')">♥ Herc</button>
+                <button onclick="chooseTrump('♦')">♦ Karo</button>
+                <button onclick="chooseTrump('♣')">♣ Tref</button>
+                <button onclick="chooseTrump('pass')">Dalje</button>
+            </div>
+
+            <h3>Moje karte</h3>
+            <div id="cards"></div>
+
+            <h3>Akcije</h3>
+            <button onclick="declareBela()">Prijavi BELU</button>
+            <button onclick="declarePoints(20)">Zvanje 20</button>
+            <button onclick="declarePoints(50)">Zvanje 50</button>
+            <button onclick="declarePoints(100)">Zvanje 100</button>
+            <button onclick="declarePoints(150)">Zvanje 150</button>
+
+            <h3>Stol</h3>
+            <div id="table"></div>
+
+            <h3>Dnevnik</h3>
+            <div id="log"></div>
+        </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
