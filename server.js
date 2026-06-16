@@ -404,41 +404,38 @@ function declarePoints(socket, points) {
     const room = getRoom(socket);
 
     if (!room || room.phase !== "play") return;
-if (room.declaredPlayers[socket.id]) {
-    socket.emit(
-        "errorMessage",
-        "Već si prijavio zvanje u ovoj rundi."
-    );
-    return;
-}
-if (room.declaredPlayers[socket.id]) {
-    socket.emit(
-        "errorMessage",
-        "Već si prijavio zvanje u ovoj rundi."
-    );
-    return;
-}
 
-if (room.currentTrick.length > 0) {
-    socket.emit(
-        "errorMessage",
-        "Zvanja se mogu prijaviti samo prije prve karte."
-    );
-    return;
-}
+    if (room.declaredPlayers[socket.id]) {
+        socket.emit(
+            "errorMessage",
+            "Već si prijavio zvanje u ovoj rundi."
+        );
+        return;
+    }
+
+    if (room.currentTrick.length > 0) {
+        socket.emit(
+            "errorMessage",
+            "Zvanja se mogu prijaviti samo prije prve karte."
+        );
+        return;
+    }
 
     points = Number(points);
 
     if (![20, 50, 100, 150].includes(points)) {
-        socket.emit("errorMessage", "Zvanje može biti 20, 50, 100 ili 150.");
+        socket.emit(
+            "errorMessage",
+            "Neispravno zvanje."
+        );
         return;
     }
+
+    room.declaredPlayers[socket.id] = true;
 
     const team = getTeamBySocketId(room, socket.id);
 
     room.declarations[team] += points;
-
-    room.declaredPlayers[socket.id] = true;
 
     io.to(room.id).emit("declarationMade", {
         player: socket.data.playerName,
@@ -446,7 +443,17 @@ if (room.currentTrick.length > 0) {
         points
     });
 
-    io.to(room.id).emit("logMessage", socket.data.playerName + " prijavljuje zvanje " + points + ". Tim " + team + " +" + points + ".");
+    io.to(room.id).emit(
+        "logMessage",
+        socket.data.playerName +
+        " prijavljuje zvanje " +
+        points +
+        ". Tim " +
+        team +
+        " +" +
+        points
+    );
+
     sendRoomState(room.id);
 }
 
