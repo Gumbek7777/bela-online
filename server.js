@@ -154,6 +154,108 @@ function totalDeclarationPoints(list) {
     );
 }
 
+const DECLARATION_ORDER = ["7","8","9","10","J","Q","K","A"];
+
+function checkDeclarations(hand, trump) {
+    let declarations = [];
+
+    const hasKing = hand.some(c => c.suit === trump && c.rank === "K");
+    const hasQueen = hand.some(c => c.suit === trump && c.rank === "Q");
+
+    if (hasKing && hasQueen) {
+        declarations.push({
+            name: "Bela",
+            points: 20
+        });
+    }
+
+    let grouped = {};
+
+    hand.forEach(card => {
+        grouped[card.rank] ??= [];
+        grouped[card.rank].push(card);
+    });
+
+    Object.keys(grouped).forEach(rank => {
+
+        if (grouped[rank].length === 4) {
+
+            let points = 100;
+
+            if (rank === "J") points = 200;
+            if (rank === "9") points = 150;
+            if (rank === "7" || rank === "8") points = 0;
+
+            if (points > 0) {
+                declarations.push({
+                    name: "4x " + rank,
+                    points
+                });
+            }
+        }
+    });
+
+    SUITS.forEach(suit => {
+
+        let cards = hand
+            .filter(c => c.suit === suit)
+            .sort(
+                (a,b)=>
+                DECLARATION_ORDER.indexOf(a.rank) -
+                DECLARATION_ORDER.indexOf(b.rank)
+            );
+
+        let run = 1;
+
+        for (let i=1;i<cards.length;i++) {
+
+            let prev =
+                DECLARATION_ORDER.indexOf(cards[i-1].rank);
+
+            let curr =
+                DECLARATION_ORDER.indexOf(cards[i].rank);
+
+            if (curr === prev + 1) {
+                run++;
+            } else {
+
+                if (run >= 3) {
+
+                    declarations.push({
+                        name: run + " u nizu",
+                        points:
+                            run >= 5 ? 100 :
+                            run === 4 ? 50 :
+                            20
+                    });
+                }
+
+                run = 1;
+            }
+        }
+
+        if (run >= 3) {
+
+            declarations.push({
+                name: run + " u nizu",
+                points:
+                    run >= 5 ? 100 :
+                    run === 4 ? 50 :
+                    20
+            });
+        }
+    });
+
+    return declarations;
+}
+
+function totalDeclarationPoints(list) {
+    return list.reduce(
+        (sum,d)=>sum+d.points,
+        0
+    );
+}
+
 function createRoom(roomId) {
     rooms[roomId] = {
         id: roomId,
@@ -170,7 +272,8 @@ function createRoom(roomId) {
         totalPoints: { A: 0, B: 0 },
         declarations: { A: 0, B: 0 },
         bela: { A: false, B: false },
-        declaredPlayers: {}
+        declaredPlayers: {},
+        playerDeclarations: {}
     };
 }
 
@@ -231,6 +334,7 @@ function resetRound(room) {
     room.declarations = { A: 0, B: 0 };
     room.bela = { A: false, B: false };
     room.declaredPlayers = {};
+    room.playerDeclarations = {};
 }
 
 function dealCards(roomId) {
@@ -502,7 +606,7 @@ function declareBela(socket) {
     sendRoomState(room.id);
 }
 
-function declarePoints(socket, points) {
+function declarePoints(socket) {
     const room = getRoom(socket);
 
     if (!room || room.phase !== "play") return;
@@ -510,59 +614,75 @@ function declarePoints(socket, points) {
     if (room.declaredPlayers[socket.id]) {
         socket.emit(
             "errorMessage",
-            "Već si prijavio zvanje u ovoj rundi."
+            "Već si prijavio zvanja."
         );
         return;
     }
 
-    if (room.currentTrick.length > 0) {
+    if (
+        room.currentTrick.length > 0 ||
+        room.trickNumber > 0
+    ) {
         socket.emit(
             "errorMessage",
-            "Zvanja se mogu prijaviti samo prije prve karte."
+            "Zvanja se prijavljuju prije prve karte."
         );
         return;
     }
 
-    room.declaredPlayers[socket.id] = true;
+    const hand =
+        room.hands[socket.id] || [];
 
-    const team = getTeamBySocketId(room, socket.id);
+    const team =
+        getTeamBySocketId(
+            room,
+            socket.id
+        );
+
+    const declarations =
+        checkDeclarations(
+            hand,
+            room.trump
+        );
+
+    const points =
+        totalDeclarationPoints(
+            declarations
+        );
+
+    room.declaredPlayers[socket.id] = true;
+    room.playerDeclarations[socket.id] =
+        declarations;
+
+    if (points <= 0) {
+
+        socket.emit(
+            "errorMessage",
+            "Nemaš zvanja."
+        );
+
+        return;
+    }
 
     room.declarations[team] += points;
 
-    io.to(room.id).emit("declarationMade", {
-        player: socket.data.playerName,
-        team,
-        points
-    });
-
-    const declarations =
-    checkDeclarations(
-        room.hands[socket.id] || [],
-        room.trump
-    );
-
-const points =
-    totalDeclarationPoints(declarations);
-
-if (points <= 0) {
-
     socket.emit(
-        "errorMessage",
-        "Nemaš zvanja."
+        "yourDeclarations",
+        {
+            declarations,
+            points
+        }
     );
-
-    return;
-}
 
     io.to(room.id).emit(
-        "logMessage",
-        socket.data.playerName +
-        " prijavljuje zvanje " +
-        points +
-        ". Tim " +
-        team +
-        " +" +
-        points
+        "declarationMade",
+        {
+            player:
+                socket.data.playerName,
+            team,
+            points,
+            declarations
+        }
     );
 
     sendRoomState(room.id);
@@ -661,7 +781,7 @@ io.on("connection", socket => {
     socket.on("setTrump", trump => chooseTrump(socket, trump));
     socket.on("playCard", card => playCard(socket, card));
     socket.on("declareBela", () => declareBela(socket));
-    socket.on("declarePoints", () => declarePoints(socket));
+    socket.on("declarePoints",() => declarePoints(socket));
 
     socket.on("disconnect", () => {
         const roomId = socket.data.roomId;
