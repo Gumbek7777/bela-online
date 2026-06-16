@@ -14,10 +14,7 @@ function joinRoom() {
 
     currentRoom = roomId;
 
-    socket.emit("joinRoom", {
-        roomId,
-        playerName
-    });
+    socket.emit("joinRoom", { roomId, playerName });
 
     document.getElementById("joinBox").classList.add("hidden");
     document.getElementById("gameBox").classList.remove("hidden");
@@ -32,11 +29,11 @@ function chooseTrump(trump) {
 }
 
 function declareBela() {
-    socket.emit("declareBela");
+    socket.emit("declarePoints");
 }
 
-function declarePoints(points) {
-    socket.emit("declarePoints", points);
+function declarePoints() {
+    socket.emit("declarePoints");
 }
 
 socket.on("chooseTrump", () => {
@@ -79,6 +76,32 @@ socket.on("trumpSelected", data => {
 socket.on("yourCards", cards => {
     myCards = cards;
     renderCards();
+});
+
+socket.on("yourDeclarations", data => {
+    addLog(
+        "Tvoja zvanja: " +
+        data.declarations.map(d => d.name + " (" + d.points + ")").join(", ") +
+        " = " +
+        data.points +
+        " bodova."
+    );
+});
+
+socket.on("declarationMade", data => {
+    let tekst = data.player + " ima zvanja ";
+
+    if (data.declarations && data.declarations.length > 0) {
+        tekst += data.declarations
+            .map(d => d.name + " (" + d.points + ")")
+            .join(", ");
+    } else {
+        tekst += data.points;
+    }
+
+    tekst += ". Tim " + data.team + " +" + data.points + ".";
+
+    addLog(tekst);
 });
 
 socket.on("cardPlayed", data => {
@@ -130,14 +153,6 @@ socket.on("roundFinished", data => {
 socket.on("gameFinished", data => {
     alert("KRAJ IGRE! Pobijedio je Tim " + data.winner);
     addLog("KRAJ IGRE! Pobijedio je Tim " + data.winner);
-});
-
-socket.on("belaDeclared", data => {
-    addLog(data.player + " prijavljuje BELU! Tim " + data.team + " +20.");
-});
-
-socket.on("declarationMade", data => {
-    addLog(data.player + " prijavljuje zvanje " + data.points + ". Tim " + data.team + ".");
 });
 
 socket.on("turnUpdate", data => {
