@@ -67,7 +67,8 @@ function createRoom(roomId) {
         roundPoints: { A: 0, B: 0 },
         totalPoints: { A: 0, B: 0 },
         declarations: { A: 0, B: 0 },
-        bela: { A: false, B: false }
+        bela: { A: false, B: false },
+        declaredPlayers: {}
     };
 }
 
@@ -127,6 +128,7 @@ function resetRound(room) {
     room.roundPoints = { A: 0, B: 0 };
     room.declarations = { A: 0, B: 0 };
     room.bela = { A: false, B: false };
+    room.declaredPlayers = {};
 }
 
 function dealCards(roomId) {
@@ -402,6 +404,28 @@ function declarePoints(socket, points) {
     const room = getRoom(socket);
 
     if (!room || room.phase !== "play") return;
+if (room.declaredPlayers[socket.id]) {
+    socket.emit(
+        "errorMessage",
+        "Već si prijavio zvanje u ovoj rundi."
+    );
+    return;
+}
+if (room.declaredPlayers[socket.id]) {
+    socket.emit(
+        "errorMessage",
+        "Već si prijavio zvanje u ovoj rundi."
+    );
+    return;
+}
+
+if (room.currentTrick.length > 0) {
+    socket.emit(
+        "errorMessage",
+        "Zvanja se mogu prijaviti samo prije prve karte."
+    );
+    return;
+}
 
     points = Number(points);
 
@@ -413,6 +437,8 @@ function declarePoints(socket, points) {
     const team = getTeamBySocketId(room, socket.id);
 
     room.declarations[team] += points;
+
+    room.declaredPlayers[socket.id] = true;
 
     io.to(room.id).emit("declarationMade", {
         player: socket.data.playerName,
