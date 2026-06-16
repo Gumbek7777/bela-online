@@ -1,6 +1,6 @@
 {
-  "name": "bela-online-v2",
-  "version": "2.0.0",
+  "name": "bela-online",
+  "version": "1.0.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
